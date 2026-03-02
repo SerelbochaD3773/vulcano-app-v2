@@ -2,6 +2,7 @@ import React from 'react';
 import NavbarPpal from '../components/NavbarPpal';
 import VulcanoMain from '../components/VulcanoMain';
 import VulcanoCarousel from '../components/VulcanoCarousel';
+import VulcanoFooter from '../components/VulcanoFooter';
 
 const VulcanoHome = () => {
   return (
@@ -9,6 +10,7 @@ const VulcanoHome = () => {
       <NavbarPpal />
       <VulcanoMain />
       <VulcanoCarousel />
+      <VulcanoFooter />
     </div>
   );
 };

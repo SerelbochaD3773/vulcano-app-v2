@@ -1,0 +1,220 @@
+/* Fondo oscuro y fuente del footer completo */
+.vf-footer {
+  background-color: var(--color-dark);
+  font-family: 'Nunito', sans-serif;
+  position: relative;
+}
+
+/* Línea decorativa con degradado rosado en la parte superior */
+.vf-top-border {
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-blush) 20%,
+    var(--color-mid) 50%,
+    var(--color-blush) 80%,
+    transparent 100%
+  );
+}
+
+/* Grid de 3 columnas centrado con ancho máximo */
+.vf-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px 32px 12px;
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1.4fr;
+  gap: 24px;
+}
+
+
+
+/* --- MARCA --- */
+
+.vf-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.vf-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vf-logo-icon {
+  height: 36px;
+  width: 36px;
+  object-fit: contain;
+}
+
+.vf-logo-text {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-white);
+  letter-spacing: 1.5px;
+}
+
+.vf-brand-desc {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--color-blush);
+  max-width: 260px;
+}
+
+
+
+/* --- TÍTULO DE CADA COLUMNA --- */
+
+.vf-col-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--color-cream);
+  margin-bottom: 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(211, 171, 176, 0.25);
+}
+
+
+
+/* --- NAVEGACIÓN --- */
+
+.vf-nav-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vf-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-blush);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 700;
+  transition: color 0.2s ease, gap 0.2s ease;
+}
+
+.vf-nav-link:hover {
+  color: var(--color-cream);
+  gap: 10px;
+}
+
+.vf-link-arrow {
+  font-size: 7px;
+  opacity: 0.6;
+}
+
+
+
+/* ---------- EQUIPO ---------- */
+
+.vf-team-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vf-team-member {
+  display: flex;
+}
+
+.vf-member-link {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  text-decoration: none;
+  transition: transform 0.2s ease;
+}
+
+.vf-member-link:hover {
+  transform: translateX(4px);
+}
+
+.vf-member-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: var(--color-mid);
+  color: var(--color-white);
+  font-size: 10px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--color-blush);
+  transition: background-color 0.2s ease;
+}
+
+.vf-member-link:hover .vf-member-avatar {
+  background-color: var(--color-blush);
+  color: var(--color-dark);
+}
+
+.vf-member-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-white);
+  line-height: 1.2;
+  display: block;
+}
+
+.vf-member-role {
+  font-size: 10px;
+  color: var(--color-mid);
+  display: block;
+}
+
+
+
+/* --- BARRA INFERIOR --- */
+
+.vf-bottom-bar {
+  border-top: 1px solid rgba(211, 171, 176, 0.2);
+  padding: 8px 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--color-mid);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.vf-bottom-divider {
+  color: var(--color-blush);
+  opacity: 0.5;
+}
+
+.vf-bottom-bar span:last-child {
+  font-size: 14px;
+}
+
+
+
+/* --- MEDIA QUERIES --- */
+
+@media (max-width: 1024px) {
+  .vf-container {
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .vf-container {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 16px 24px 12px;
+  }
+}
