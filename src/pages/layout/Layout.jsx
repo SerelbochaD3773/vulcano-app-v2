@@ -19,7 +19,7 @@ import "../../styles/Layout.css";
 import EditProfileModal from "../../components/EditProfileModal";
 import { getUserById } from "../../services/api";
 
-const Layout = () => {
+const Layout = ({ children }) => {
   const navigate = useNavigate();
 
   const [user, setUser] = useState(() => {
@@ -159,7 +159,7 @@ const Layout = () => {
           {isSidebarOpen ? "◀" : "☰"}
         </button>
 
-        <Outlet />
+        {children || <Outlet context={{ setShowEditModal, firstName }} />}
       </main>
 
       {showEditModal && user && (
