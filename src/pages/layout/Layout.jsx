@@ -103,6 +103,7 @@ const Layout = ({ children }) => {
             <span className="sidebar-text">Cursos</span>
           </button>
 
+          {user?.role === "ADMIN" && (
           <button
             className="sidebar-nav-btn"
             onClick={() => navigate("/layout/module-view")}
@@ -110,6 +111,7 @@ const Layout = ({ children }) => {
             <span className="btn-icon">🎓</span>
             <span className="sidebar-text">Módulos</span>
           </button>
+          )}
 
           <button
             className="sidebar-nav-btn"
