@@ -11,7 +11,6 @@ import Layout from "../pages/layout/Layout";
 import DashboardHome from "../pages/layout/DashboardHome";
 import ClassScheduling from "../components/ClassScheduling";
 import StudentModuleView from "../pages/StudentModuleView";
-
 import ClassManagement from "../components/ClassManagement";
 import TeacherForm from "../components/TeacherForm";
 import PrivateRoute from "./PrivateRoute";
@@ -22,18 +21,26 @@ const router = createBrowserRouter([
         element: <VulcanHome />,
     },
     {
-        // Ruta pública: cualquiera puede acceder
         path: "/login",
         element: <VulcanoLogin />,
     },
     {
-        // Ruta pública: cualquiera puede acceder
         path: "/register",
         element: <VulcanoRegister />,
     },
     {
-        // Ruta PROTEGIDA: solo usuarios con sesión activa
-        // PrivateRoute verifica el localStorage antes de mostrar Layout
+        path: "/modules",
+        element: <ModuleView />,
+    },
+    {
+        path: "/studentmodules",
+        element: <StudentModuleView />,
+    },
+    {
+        path: "/studentmodules/:moduleId",
+        element: <StudentModuleView />,
+    },
+    {
         path: "/layout",
         element: <PrivateRoute><Layout /></PrivateRoute>,
         children: [

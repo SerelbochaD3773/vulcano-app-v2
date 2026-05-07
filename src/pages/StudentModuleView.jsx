@@ -81,13 +81,13 @@ const StudentModuleView = () => {
     } else if (modules.length > 0 && !moduleId) {
       const firstActive = modules.find(m => m.status === 'ACTIVE');
       if (firstActive) {
-        navigate(`/StudentModules/${firstActive.id}`, { replace: true });
+        navigate(`/studentmodules/${firstActive.id}`, { replace: true });
       }
     }
   }, [moduleId, modules, navigate]);
 
   const handleSelectModule = (id) => {
-    navigate(`/StudentModules/${id}`);
+    navigate(`/studentmodules/${id}`);
   };
 
   const extractVideoId = (url) => {

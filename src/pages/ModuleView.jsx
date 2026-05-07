@@ -17,6 +17,8 @@ const ModuleView = () => {
   const [deleteId, setDeleteId] = useState(null);
   const [saving, setSaving] = useState(false);
 
+  useEffect
+
   /* ---- Toast con Swal ---- */
   const showToast = (msg, icon = 'success') => {
     Swal.fire({
