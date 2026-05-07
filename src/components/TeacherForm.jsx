@@ -33,7 +33,9 @@ const TeacherForm = () => {
     lastName: "",
     email: "",
     specialty: "",
+    customSpecialty: "",
     phoneNumber: "",
+    profilePictureUrl: "",
   };
   const [formData, setFormData] = useState(emptyForm);
 
@@ -46,7 +48,8 @@ const TeacherForm = () => {
     setLoadingList(true);
     try {
       const all = await getAllUsers();
-      setTeachers(all.filter((u) => u.role === "TEACHER"));
+      // Mostrar usuarios que tengan rol TEACHER o que tengan una especialidad (bio) guardada
+      setTeachers(all.filter((u) => u.role === "TEACHER" || u.profile?.bio));
     } catch {
       setTeachers([]);
     } finally {
@@ -79,10 +82,10 @@ const TeacherForm = () => {
       profile: {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
-        // email NO puede ser null en la DB (NOT NULL + UNIQUE) → usamos placeholder si no lo ingresaron
         email: formData.email.trim() || emailPlaceholder,
-        bio: formData.specialty.trim() || null,
+        bio: formData.specialty === "Otra" ? formData.customSpecialty.trim() : formData.specialty.trim() || null,
         phoneNumber: formData.phoneNumber.trim() || null,
+        profilePictureUrl: formData.profilePictureUrl.trim() || null,
         status: "ACTIVE",
       },
     };
@@ -316,20 +319,56 @@ const TeacherForm = () => {
                 placeholder="+54 11 1234-5678"
               />
             </div>
+            
+            <div className="tf-form-group">
+              <label className="tf-label">URL Foto de Perfil</label>
+              <input
+                className="tf-input"
+                type="url"
+                name="profilePictureUrl"
+                value={formData.profilePictureUrl}
+                onChange={handleChange}
+                placeholder="https://ejemplo.com/foto.jpg"
+              />
+            </div>
           </div>
 
           <div className="tf-form-grid full">
             <div className="tf-form-group">
               <label className="tf-label">Especialidad</label>
-              <textarea
-                className="tf-textarea"
+              <select
+                className="tf-input"
                 name="specialty"
                 value={formData.specialty}
                 onChange={handleChange}
-                placeholder="Ej: Matemáticas avanzadas, Programación Python..."
-                rows={3}
-              />
+              >
+                <option value="">Selecciona una especialidad</option>
+                <option value="JavaScript">JavaScript</option>
+                <option value="Python">Python</option>
+                <option value="Java">Java</option>
+                <option value="C#">C#</option>
+                <option value="Ruby">Ruby</option>
+                <option value="Go">Go</option>
+                <option value="C++">C++</option>
+                <option value="PHP">PHP</option>
+                <option value="TypeScript">TypeScript</option>
+                <option value="Swift">Swift</option>
+                <option value="Otra">Otra</option>
+              </select>
             </div>
+            
+            {formData.specialty === "Otra" && (
+              <div className="tf-form-group" style={{marginTop: '16px'}}>
+                <label className="tf-label">Ingresa la especialidad</label>
+                <input
+                  className="tf-input"
+                  name="customSpecialty"
+                  value={formData.customSpecialty}
+                  onChange={handleChange}
+                  placeholder="Ej: Matemáticas avanzadas"
+                />
+              </div>
+            )}
           </div>
 
           <div className="tf-form-actions">

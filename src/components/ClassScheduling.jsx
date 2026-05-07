@@ -1,32 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../styles/Course.css';
 import { alertaEliminarClase } from '../helpers/alerts';
 import Swal from 'sweetalert2';
+import { getAllSchedules } from '../services/scheduleService';
 
-// Datos de prueba para los expertos
-const experts = [
-    {
-        id: 1,
-        name: "Dr. Mario Munera",
-        role: "Experto en Back-end",
-        imageUrl: "https://randomuser.me/api/portraits/men/32.jpg"
-    },
-    {
-        id: 2,
-        name: "Ing. Albani Luciani",
-        role: "Experta en resulucion de conflictos",
-        imageUrl: "https://randomuser.me/api/portraits/women/44.jpg"
-    },
-    {
-        id: 3,
-        name: "Lic. Julio Correa",
-        role: "Experto en Front-end",
-        imageUrl: "https://randomuser.me/api/portraits/men/46.jpg"
-    }
-
-];
+import { getUserById } from '../services/api';
 
 const ClassScheduling = () => {
+    // --- ESTADOS DE EXPERTOS DINÁMICOS ---
+    const [experts, setExperts] = useState([]);
+    const [isLoadingExperts, setIsLoadingExperts] = useState(true);
+
     // Estado para guardar qué clases han sido agendadas por ID de experto
     const [scheduledClasses, setScheduledClasses] = useState({});
 
@@ -36,6 +20,55 @@ const ClassScheduling = () => {
     const [selectedExpertForMod, setSelectedExpertForMod] = useState(null);
     const [availableSchedules, setAvailableSchedules] = useState([]);
     const [isLoadingSchedules, setIsLoadingSchedules] = useState(false);
+
+    useEffect(() => {
+        const fetchExperts = async () => {
+            setIsLoadingExperts(true);
+            try {
+                const data = await getAllSchedules();
+                const uniqueExpertsMap = new Map();
+
+                await Promise.all(data.map(async (item) => {
+                    const isPublished = item.status === 'AVAILABLE' || item.status === 'PUBLISHED';
+                    if (!isPublished) return; // Omitir las que estén ocultas/despublicadas
+
+                    const profId = item.professorId || item.expertId;
+                    if (profId && !uniqueExpertsMap.has(profId)) {
+                        // Pre-asignar un placeholder para no perderlo por si falla la llamada
+                        uniqueExpertsMap.set(profId, {
+                            id: profId,
+                            name: item.name || item.professorName || `Profesor #${profId}`,
+                            role: item.specialty || "Experto en el tema",
+                            imageUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent('P')}&background=random`
+                        });
+
+                        try {
+                            const user = await getUserById(profId);
+                            const realName = `${user.profile?.firstName || ""} ${user.profile?.lastName || ""}`.trim();
+                            if (realName) {
+                                uniqueExpertsMap.set(profId, {
+                                    id: profId,
+                                    name: realName,
+                                    role: user.profile?.bio || "Experto en el tema",
+                                    imageUrl: user.profile?.profilePictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(realName)}&background=random`
+                                });
+                            }
+                        } catch (e) {
+                            console.error("Error al buscar el nombre real del profesor:", e);
+                        }
+                    }
+                }));
+
+                setExperts(Array.from(uniqueExpertsMap.values()));
+            } catch (error) {
+                console.error("Error al cargar profesores:", error);
+            } finally {
+                setIsLoadingExperts(false);
+            }
+        };
+
+        fetchExperts();
+    }, []);
     const [selectedDate, setSelectedDate] = useState(null);
     const [selectedTime, setSelectedTime] = useState(null);
 
@@ -129,82 +162,95 @@ const ClassScheduling = () => {
                 Agenda tu clase privada con uno de nuestros expertos
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {experts.map((expert, index) => {
-                    const scheduledInfo = scheduledClasses[expert.id];
-                    const isScheduled = !!scheduledInfo;
+            {isLoadingExperts ? (
+                <div className="text-center p-10 mt-10">
+                    <div className="w-12 h-12 border-4 border-[#d3abb0] border-t-[#472825] rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-[#96786f] font-bold text-lg">Cargando profesores disponibles...</p>
+                </div>
+            ) : experts.length === 0 ? (
+                <div className="text-center p-12 mt-10 bg-[#fff4e2]/60 rounded-2xl border-2 border-dashed border-[#d3abb0]">
+                    <span className="text-4xl block mb-4">📭</span>
+                    <h3 className="text-2xl font-bold text-[#472825] mb-2">No hay clases disponibles</h3>
+                    <p className="text-[#96786f]">Actualmente no hay profesores con horarios publicados para agendar.</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {experts.map((expert, index) => {
+                        const scheduledInfo = scheduledClasses[expert.id];
+                        const isScheduled = !!scheduledInfo;
 
-                    return (
-                        <div
-                            key={expert.id}
-                            className="cp-card hover:-translate-y-2 hover:scale-[1.03] hover:border-[var(--color-mid)] hover:shadow-[0_12px_0_var(--color-mid)] transition-all duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] flex flex-col"
-                            style={{ animationDelay: `${index * 0.07}s`, fontFamily: 'Nunito, sans-serif' }}
-                        >
-                            {/* IMAGEN DEL EXPERTO */}
-                            <div className="cp-card-img-wrapper" style={{ height: '220px' }}>
-                                <img src={expert.imageUrl} alt={expert.name} className="cp-card-img" style={{ objectFit: 'cover' }} />
-                            </div>
+                        return (
+                            <div
+                                key={expert.id}
+                                className="cp-card hover:-translate-y-2 hover:scale-[1.03] hover:border-[var(--color-mid)] hover:shadow-[0_12px_0_var(--color-mid)] transition-all duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] flex flex-col"
+                                style={{ animationDelay: `${index * 0.07}s`, fontFamily: 'Nunito, sans-serif' }}
+                            >
+                                {/* IMAGEN DEL EXPERTO */}
+                                <div className="cp-card-img-wrapper" style={{ height: '220px' }}>
+                                    <img src={expert.imageUrl} alt={expert.name} className="cp-card-img" style={{ objectFit: 'cover' }} />
+                                </div>
 
-                            {/* CONTENIDO Y BOTONES */}
-                            <div className="cp-card-list-content flex flex-col flex-1 justify-between p-5">
-                                <div>
-                                    <div className="flex justify-between items-center mb-3">
-                                        <span className="cp-card-id">#{expert.id} - Formador</span>
-                                        {isScheduled ? (
-                                            <span className="cp-pill bg-green-100 text-green-700">
-                                                ✅ Agendada
-                                            </span>
-                                        ) : (
-                                            <span className="cp-pill bg-blue-100 text-blue-700">
-                                                📅 Disponible
-                                            </span>
+                                {/* CONTENIDO Y BOTONES */}
+                                <div className="cp-card-list-content flex flex-col flex-1 justify-between p-5">
+                                    <div>
+                                        <div className="flex justify-between items-center mb-3">
+                                            <span className="cp-card-id">#{expert.id} - Formador</span>
+                                            {isScheduled ? (
+                                                <span className="cp-pill bg-green-100 text-green-700">
+                                                    ✅ Agendada
+                                                </span>
+                                            ) : (
+                                                <span className="cp-pill bg-blue-100 text-blue-700">
+                                                    📅 Disponible
+                                                </span>
+                                            )}
+                                        </div>
+                                        <h3 className="cp-card-title text-xl font-bold text-[var(--color-dark)]">
+                                            {expert.name}
+                                        </h3>
+                                        <p className="cp-card-desc mt-1 font-semibold text-[var(--color-mid)] opacity-90">
+                                            {expert.role}
+                                        </p>
+
+                                        {isScheduled && (
+                                            <div className="mt-3 p-3 bg-[#fde4bc]/40 rounded-xl border border-[#d3abb0]/50 text-sm font-bold text-[#472825] flex flex-col gap-1 items-start">
+                                                <span className="flex items-center gap-2">📅 {scheduledInfo.date}</span>
+                                                <span className="flex items-center gap-2">⏰ {scheduledInfo.time}</span>
+                                            </div>
                                         )}
                                     </div>
-                                    <h3 className="cp-card-title text-xl font-bold text-[var(--color-dark)]">
-                                        {expert.name}
-                                    </h3>
-                                    <p className="cp-card-desc mt-1 font-semibold text-[var(--color-mid)] opacity-90">
-                                        {expert.role}
-                                    </p>
 
-                                    {isScheduled && (
-                                        <div className="mt-3 p-3 bg-[#fde4bc]/40 rounded-xl border border-[#d3abb0]/50 text-sm font-bold text-[#472825] flex flex-col gap-1 items-start">
-                                            <span className="flex items-center gap-2">📅 {scheduledInfo.date}</span>
-                                            <span className="flex items-center gap-2">⏰ {scheduledInfo.time}</span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="mt-5">
-                                    {isScheduled ? (
-                                        <div className="flex gap-2">
+                                    <div className="mt-5">
+                                        {isScheduled ? (
+                                            <div className="flex gap-2">
+                                                <button
+                                                    className="cp-card-btn cp-card-edit flex-1"
+                                                    onClick={() => handleModify(expert.id)}
+                                                >
+                                                    Modificar
+                                                </button>
+                                                <button
+                                                    className="cp-card-btn cp-card-delete flex-1"
+                                                    onClick={() => handleCancel(expert.id)}
+                                                >
+                                                    Eliminar
+                                                </button>
+                                            </div>
+                                        ) : (
                                             <button
-                                                className="cp-card-btn cp-card-edit flex-1"
-                                                onClick={() => handleModify(expert.id)}
+                                                className="w-full bg-[var(--color-dark)] text-[var(--color-cream)] border-none rounded-xl py-3 font-bold hover:bg-[var(--color-mid)] transition-colors shadow-sm"
+                                                onClick={() => handleSchedule(expert.id)}
                                             >
-                                                Modificar
+                                                Agendar Clase
                                             </button>
-                                            <button
-                                                className="cp-card-btn cp-card-delete flex-1"
-                                                onClick={() => handleCancel(expert.id)}
-                                            >
-                                                Eliminar
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <button
-                                            className="w-full bg-[var(--color-dark)] text-[var(--color-cream)] border-none rounded-xl py-3 font-bold hover:bg-[var(--color-mid)] transition-colors shadow-sm"
-                                            onClick={() => handleSchedule(expert.id)}
-                                        >
-                                            Agendar Clase
-                                        </button>
-                                    )}
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    );
-                })}
-            </div>
+                        );
+                    })}
+                </div>
+            )}
 
             {/* MODAL DE MODIFICACIÓN */}
             {isModalOpen && (
