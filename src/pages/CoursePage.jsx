@@ -93,7 +93,11 @@ const CoursePage = () => {
 
   const handleCreate = form => {
     setSaving(true);
-    createCourse(form)
+    const payload = {
+      ...form,
+      creatorUserId: currentUser?.id || 1 // Fallback a 1 si no hay usuario logueado en pruebas
+    };
+    createCourse(payload)
       .then(() => {
         setSaving(false); setModal(null); showToast('✅ Curso creado exitosamente');
         if (document.startViewTransition) document.startViewTransition(() => load());
@@ -112,6 +116,7 @@ const CoursePage = () => {
       courseLevel: form.courseLevel,
       isPublished: form.isPublished,
       status: form.status,
+      creatorUserId: currentUser?.id || 1
     };
     updateCourse(editing.id, payload)
       .then(() => {
