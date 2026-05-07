@@ -29,11 +29,15 @@ const router = createBrowserRouter([
         element: <VulcanoRegister />,
     },
     {
-        path: "/StudentModules",
+        path: "/modules",
+        element: <ModuleView />,
+    },
+    {
+        path: "/studentmodules",
         element: <StudentModuleView />,
     },
     {
-        path: "/StudentModules/:moduleId",
+        path: "/studentmodules/:moduleId",
         element: <StudentModuleView />,
     },
     {
