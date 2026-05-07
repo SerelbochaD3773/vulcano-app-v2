@@ -11,28 +11,6 @@ import Layout from "../pages/layout/Layout";
 import DashboardHome from "../pages/layout/DashboardHome";
 import ClassScheduling from "../components/ClassScheduling";
 import StudentModuleView from "../pages/StudentModuleView";
-
-export const MyRoutes = () => (
-    <BrowserRouter>
-        <Routes>
-            <Route path="/" element={<VulcanHome />} />
-            <Route path="/Login" element={<VulcanoLogin />} />
-            <Route path="/Register" element={<VulcanoRegister />} />
-            <Route path="/Course" element={<CoursePage />} />
-            <Route path="/ModuleView" element={<ModuleView />} />
-            <Route path="/StudentModules" element={<StudentModuleView />} />
-            <Route path="/StudentModules/:moduleId" element={<StudentModuleView />} />
-            <Route path="/Review" element={<Review />} />
-            <Route path="/Users" element={<UserManagement />} />
-            <Route path="/Dashboard" element={<Dashboard />} />
-            <Route path="/layout" element={<Layout />}>
-                <Route index element={<DashboardHome />} />
-                <Route path="agendar" element={<ClassScheduling />} />
-            </Route>
-            <Route path="*" element={<Page404 />} />
-        </Routes>
-    </BrowserRouter>
-);
 import ClassManagement from "../components/ClassManagement";
 import TeacherForm from "../components/TeacherForm";
 import PrivateRoute from "./PrivateRoute";
@@ -43,18 +21,22 @@ const router = createBrowserRouter([
         element: <VulcanHome />,
     },
     {
-        // Ruta pública: cualquiera puede acceder
         path: "/login",
         element: <VulcanoLogin />,
     },
     {
-        // Ruta pública: cualquiera puede acceder
         path: "/register",
         element: <VulcanoRegister />,
     },
     {
-        // Ruta PROTEGIDA: solo usuarios con sesión activa
-        // PrivateRoute verifica el localStorage antes de mostrar Layout
+        path: "/StudentModules",
+        element: <StudentModuleView />,
+    },
+    {
+        path: "/StudentModules/:moduleId",
+        element: <StudentModuleView />,
+    },
+    {
         path: "/layout",
         element: <PrivateRoute><Layout /></PrivateRoute>,
         children: [
