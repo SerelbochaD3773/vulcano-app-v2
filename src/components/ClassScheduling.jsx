@@ -158,7 +158,7 @@ const ClassScheduling = () => {
 
     return (
         <div className="p-8 w-full">
-            <h2 className="text-3xl font-bold text-[var(--color-dark)] mb-8 text-center" style={{ fontFamily: 'Nunito, sans-serif' }}>
+            <h2 className="text-3xl font-bold text-(--color-dark) mb-8 text-center" style={{ fontFamily: 'Nunito, sans-serif' }}>
                 Agenda tu clase privada con uno de nuestros expertos
             </h2>
 

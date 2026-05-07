@@ -41,7 +41,22 @@ export async function loginUser(username, password) {
 }
 
 // ----------------------------------------------------------
-// updateUser
+// getUserById
+// ----------------------------------------------------------
+// Obtiene un usuario por su ID, incluyendo sus cursos inscritos.
+// Llama a: GET /api/users/{id}
+// ----------------------------------------------------------
+export async function getUserById(id) {
+  const response = await fetch(`${end_points.users}/${id}`);
+
+  if (!response.ok) {
+    const errorMsg = await response.text();
+    throw new Error(errorMsg || "Error al obtener el usuario");
+  }
+
+  return response.json();
+}
+
 // ----------------------------------------------------------
 // Envía los datos actualizados del perfil al backend.
 // Llama a: PUT /api/users/{id}
@@ -74,16 +89,17 @@ export async function updateUser(id, payload) {
 // ----------------------------------------------------------
 // Obtiene la información fresca del usuario desde la BD.
 // ----------------------------------------------------------
-export async function getUserById(id) {
-  const response = await fetch(`${end_points.users}/${id}`);
 
-  if (!response.ok) {
-    const errorMsg = await response.text();
-    throw new Error(errorMsg || "Error al obtener datos del usuario");
-  }
+//export async function getUserById(id) {
+//  const response = await fetch(`${end_points.users}/${id}`);
+//
+// if (!response.ok) {
+//    const errorMsg = await response.text();
+//    throw new Error(errorMsg || "Error al obtener datos del usuario");
+//  }
 
-  return response.json();
-}
+//  return response.json();
+//}
 
 // ----------------------------------------------------------
 // registerUser
@@ -115,8 +131,19 @@ export async function registerUser(formData, file = null) {
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    throw new Error(errorData?.message || `Error al registrar usuario: ${response.status}`);
+    // Intentamos parsear como JSON primero (el backend devuelve { "message": "..." })
+    // Si falla, intentamos como texto plano
+    let errorMessage = `Error al registrar usuario: ${response.status}`;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch {
+      try {
+        const errorText = await response.text();
+        if (errorText) errorMessage = errorText;
+      } catch { /* usar mensaje por defecto */ }
+    }
+    throw new Error(errorMessage);
   }
 
   let user = await response.json();
@@ -189,4 +216,33 @@ export async function updateUserRole(userId, newRole) {
   }
 
   return response.json();
-}
+}
+
+// ----------------------------------------------------------
+// enrollInCourse
+// ----------------------------------------------------------
+// Inscribe un usuario en un curso.
+// Llama a: POST /api/users/{userId}/courses/{courseId}
+// ----------------------------------------------------------
+export async function enrollInCourse(userId, courseId) {
+  const response = await fetch(`${end_points.users}/${userId}/courses/${courseId}`, {
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Error al inscribirse en el curso";
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch {
+      try {
+        const errorText = await response.text();
+        if (errorText) errorMessage = errorText;
+      } catch { /* usar mensaje por defecto */ }
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+}
+

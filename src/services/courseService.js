@@ -12,6 +12,24 @@
 const API = "/api/courses";
 
 /**
+ * Helper: extrae el mensaje de error de una respuesta HTTP fallida.
+ * Intenta parsear JSON primero ({ message: "..." }), si falla usa texto plano.
+ */
+const extractError = async (res, fallback) => {
+  try {
+    const data = await res.json();
+    return data.message || fallback;
+  } catch {
+    try {
+      const text = await res.text();
+      return text || fallback;
+    } catch {
+      return fallback;
+    }
+  }
+};
+
+/**
  * [READ] Obtiene la lista completa de cursos.
  * @returns {Promise<Array>} Retorna una Promesa que contiene el arreglo de cursos.
  */
@@ -32,7 +50,10 @@ export const createCourse = async (course) => {
     headers: { 'Content-Type': 'application/json' }, // Indicamos que mandamos un JSON
     body: JSON.stringify(course) // Transformamos el objeto JS a una cadena de texto JSON
   });
-  if (!res.ok) throw new Error("Error al crear curso");
+  if (!res.ok) {
+    const msg = await extractError(res, "Error al crear curso");
+    throw new Error(msg);
+  }
   return await res.json();
 };
 
@@ -47,7 +68,10 @@ export const updateCourse = async (id, course) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(course)
   });
-  if (!res.ok) throw new Error("Error al actualizar curso");
+  if (!res.ok) {
+    const msg = await extractError(res, "Error al actualizar curso");
+    throw new Error(msg);
+  }
   return await res.json();
 };
 
@@ -59,6 +83,9 @@ export const deleteCourse = async (id) => {
   const res = await fetch(`${API}/${id}`, {
     method: 'DELETE' // Le indicamos al servidor que la acción es destructiva
   });
-  if (!res.ok) throw new Error("Error al eliminar curso");
+  if (!res.ok) {
+    const msg = await extractError(res, "Error al eliminar curso");
+    throw new Error(msg);
+  }
   return true;
 };

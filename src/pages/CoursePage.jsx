@@ -12,12 +12,14 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import NavbarPpal from '../components/NavbarPpal';
 import VulcanoFooter from '../components/VulcanoFooter';
 import Swal from 'sweetalert2';
 
 import '../styles/Course.css';
 import { getCourses, createCourse, updateCourse, deleteCourse } from "../services/courseService";
+import { enrollInCourse, getUserById } from "../services/api";
 import Modal from '../components/Modal';
 import CourseForm from '../components/CourseForm';
 import CourseCard from '../components/CourseCard';
@@ -41,6 +43,7 @@ const CourseCardSkeleton = () => (
 
 /* ---- Página principal ---- */
 const CoursePage = () => {
+  const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -54,6 +57,7 @@ const CoursePage = () => {
   const [viewMode, setViewMode] = useState('grid');
   const [courseToDelete, setCourseToDelete] = useState(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [enrolledIds, setEnrolledIds] = useState(new Set()); // IDs reales de cursos inscritos
 
   // Leer el rol del usuario desde localStorage (igual que Layout.jsx)
   const storedUser = localStorage.getItem('user');
@@ -91,6 +95,18 @@ const CoursePage = () => {
 
   useEffect(() => { load(); }, [load]);
 
+  // Cargar cursos inscritos del usuario real desde el backend
+  useEffect(() => {
+    if (currentUser?.id && roleView === 'USER') {
+      getUserById(currentUser.id)
+        .then(user => {
+          const ids = new Set((user.courses || []).map(c => c.id));
+          setEnrolledIds(ids);
+        })
+        .catch(() => setEnrolledIds(new Set()));
+    }
+  }, [currentUser?.id, roleView]);
+
   const handleCreate = form => {
     setSaving(true);
     const payload = {
@@ -103,7 +119,7 @@ const CoursePage = () => {
         if (document.startViewTransition) document.startViewTransition(() => load());
         else load();
       })
-      .catch(() => { setSaving(false); showToast('❌ Error al crear el curso'); });
+      .catch((err) => { setSaving(false); showToast(err.message || '❌ Error al crear el curso', 'error'); });
   };
 
   const handleUpdate = form => {
@@ -124,7 +140,7 @@ const CoursePage = () => {
         if (document.startViewTransition) document.startViewTransition(() => load());
         else load();
       })
-      .catch(() => { setSaving(false); showToast('❌ Error al actualizar el curso'); });
+      .catch((err) => { setSaving(false); showToast(err.message || '❌ Error al actualizar el curso', 'error'); });
   };
 
   const confirmDelete = course => {
@@ -160,6 +176,33 @@ const CoursePage = () => {
 
   const openEdit = course => { setEditing(course); setModal('edit'); };
 
+  // Navega a la vista de módulos filtrada por el curso seleccionado
+  const handleModules = course => {
+    navigate(`/layout/module-view?courseId=${course.id}&courseName=${encodeURIComponent(course.name)}`);
+  };
+
+  // Inscribir al usuario en un curso (flujo real)
+  const handleEnroll = course => {
+    if (!currentUser?.id) {
+      showToast('Debes iniciar sesión para inscribirte', 'warning');
+      return;
+    }
+    enrollInCourse(currentUser.id, course.id)
+      .then(() => {
+        // Actualizar el Set local de IDs inscritos
+        setEnrolledIds(prev => new Set([...prev, course.id]));
+        showToast(`✅ ¡Te has inscrito en "${course.name}"!`);
+      })
+      .catch(err => {
+        showToast(err.message || '❌ Error al inscribirse', 'error');
+      });
+  };
+
+  // Redirigir a la vista de módulos del ESTUDIANTE (usuario inscrito)
+  const handleViewCourse = course => {
+    navigate(`/studentmodules?courseId=${course.id}&courseName=${encodeURIComponent(course.name)}`);
+  };
+
   const inactiveCourses = courses.filter(c => c.status !== 'ACTIVE').length;
   const privateCourses = courses.filter(c => !c.isPublished).length;
 
@@ -186,8 +229,8 @@ const CoursePage = () => {
     )
     .sort((a, b) => a.id - b.id);
 
-  // Mock enrolled courses para Vista Usuario
-  const enrolledCourses = courses.filter((c, i) => i % 3 === 0 && c.status === 'ACTIVE' && c.isPublished).length;
+  // Conteo real de cursos inscritos
+  const enrolledCourses = enrolledIds.size;
 
   return (
     <div className="w-full">
@@ -260,7 +303,7 @@ const CoursePage = () => {
             <input
               type="text"
               placeholder="🔎 Buscar curso por nombre o descripción..."
-              className="flex-1 px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-[var(--color-ppal)] focus:ring-4 focus:ring-indigo-100 transition-all duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:scale-[1.01] hover:shadow-md hover:z-10 font-medium text-slate-700 bg-white/50 backdrop-blur-sm shadow-sm"
+              className="flex-1 px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-ppal focus:ring-4 focus:ring-indigo-100 transition-all duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:scale-[1.01] hover:shadow-md hover:z-10 font-medium text-slate-700 bg-white/50 backdrop-blur-sm shadow-sm"
               value={searchQuery}
               onChange={(e) => updateFilter(setSearchQuery, e.target.value)}
             />
@@ -286,7 +329,7 @@ const CoursePage = () => {
             {roleView === 'ADMIN' && (
               <>
                 <select
-                  className="flex-1 px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-[var(--color-ppal)] focus:ring-4 focus:ring-indigo-100 transition-all duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:scale-[1.03] hover:shadow-md hover:z-10 font-medium text-slate-700 bg-white/50 backdrop-blur-sm shadow-sm cursor-pointer"
+                  className="flex-1 px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-ppal focus:ring-4 focus:ring-indigo-100 transition-all duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:scale-[1.03] hover:shadow-md hover:z-10 font-medium text-slate-700 bg-white/50 backdrop-blur-sm shadow-sm cursor-pointer"
                   value={statusFilter}
                   onChange={(e) => updateFilter(setStatusFilter, e.target.value)}
                 >
@@ -295,7 +338,7 @@ const CoursePage = () => {
                   <option value="INACTIVE">🔴 Inactivos ({courses.filter(c => c.status !== 'ACTIVE').length})</option>
                 </select>
                 <select
-                  className="flex-1 px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-[var(--color-ppal)] focus:ring-4 focus:ring-indigo-100 transition-all duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:scale-[1.03] hover:shadow-md hover:z-10 font-medium text-slate-700 bg-white/50 backdrop-blur-sm shadow-sm cursor-pointer"
+                  className="flex-1 px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-ppal focus:ring-4 focus:ring-indigo-100 transition-all duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:scale-[1.03] hover:shadow-md hover:z-10 font-medium text-slate-700 bg-white/50 backdrop-blur-sm shadow-sm cursor-pointer"
                   value={publishedFilter}
                   onChange={(e) => updateFilter(setPublishedFilter, e.target.value)}
                 >
@@ -306,7 +349,7 @@ const CoursePage = () => {
               </>
             )}
             <select
-              className="flex-1 px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-[var(--color-ppal)] focus:ring-4 focus:ring-indigo-100 transition-all duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:scale-[1.03] hover:shadow-md hover:z-10 font-medium text-slate-700 bg-white/50 backdrop-blur-sm shadow-sm cursor-pointer"
+              className="flex-1 px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-ppal focus:ring-4 focus:ring-indigo-100 transition-all duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:scale-[1.03] hover:shadow-md hover:z-10 font-medium text-slate-700 bg-white/50 backdrop-blur-sm shadow-sm cursor-pointer"
               value={levelFilter}
               onChange={(e) => updateFilter(setLevelFilter, e.target.value)}
             >
@@ -364,7 +407,7 @@ const CoursePage = () => {
         {status === 'ok' && filteredCourses.length > 0 && (
           <div className={viewMode === 'grid' ? "grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-5" : "flex flex-col gap-5"}>
             {filteredCourses.map((c, i) => (
-              <CourseCard key={c.id} course={c} index={i} viewMode={viewMode} onEdit={openEdit} onDelete={confirmDelete} roleView={roleView} />
+              <CourseCard key={c.id} course={c} index={i} viewMode={viewMode} onEdit={openEdit} onDelete={confirmDelete} onModules={handleModules} onEnroll={handleEnroll} onViewCourse={handleViewCourse} isEnrolled={enrolledIds.has(c.id)} roleView={roleView} />
             ))}
           </div>
         )}
