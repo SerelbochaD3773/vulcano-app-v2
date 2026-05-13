@@ -2,7 +2,13 @@ import React, { useState, useEffect } from 'react';
 import '../styles/Course.css';
 import { alertaEliminarClase } from '../helpers/alerts';
 import Swal from 'sweetalert2';
-import { getAllSchedules } from '../services/scheduleService';
+import { 
+    getAllSchedules, 
+    getAvailableSchedules, 
+    bookSchedule, 
+    updateSchedule,
+    deleteSchedule 
+} from '../services/scheduleService';
 
 import { getUserById } from '../services/api';
 
@@ -13,6 +19,12 @@ const ClassScheduling = () => {
 
     // Estado para guardar qué clases han sido agendadas por ID de experto
     const [scheduledClasses, setScheduledClasses] = useState({});
+    
+    // Obtener usuario actual del localStorage
+    const [currentUser] = useState(() => {
+        const userRaw = localStorage.getItem("user");
+        return userRaw ? JSON.parse(userRaw) : null;
+    });
 
     // --- ESTADOS PARA EL MODAL DE MODIFICACIÓN / AGENDAMIENTO ---
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -44,6 +56,10 @@ const ClassScheduling = () => {
 
                         try {
                             const user = await getUserById(profId);
+                            
+                            // VALIDACIÓN: Solo mostrar si el experto tiene rol TEACHER
+                            if (user.role !== "TEACHER") return;
+
                             const realName = `${user.profile?.firstName || ""} ${user.profile?.lastName || ""}`.trim();
                             if (realName) {
                                 uniqueExpertsMap.set(profId, {
@@ -75,20 +91,8 @@ const ClassScheduling = () => {
     // --- CONEXIÓN A API REAL (Spring Boot) ---
     const fetchAvailableSchedules = async (expertId) => {
         try {
-            const response = await fetch(`http://localhost:8080/api/schedules/available/${expertId}`);
-
-            if (!response.ok) {
-                console.error("Error obteniendo horarios:", response.status);
-                return [];
-            }
-
-            const data = await response.json();
-
-            // Tu API de Spring Boot YA nos está devolviendo el formato perfecto
-            // [{"date":"...","times":[]}, ...]
-            // Así que no necesitamos transformarlo. Lo devolvemos directo.
+            const data = await getAvailableSchedules(expertId);
             return data;
-
         } catch (error) {
             console.error("Error de conexión a la API:", error);
             return [];
@@ -131,29 +135,61 @@ const ClassScheduling = () => {
     const handleModify = (expertId) => openModal(expertId, 'modify');
 
     // Función para guardar el cambio o nuevo agendamiento
-    const handleSaveSchedule = () => {
-        // Guardar el agendamiento guardando la fecha y hora
-        setScheduledClasses(prev => ({
-            ...prev,
-            [selectedExpertForMod]: {
-                date: selectedDate,
-                time: selectedTime
-            }
-        }));
+    const handleSaveSchedule = async () => {
+        if (!currentUser) {
+            Swal.fire("Error", "Debes iniciar sesión para agendar una clase.", "error");
+            return;
+        }
 
-        setIsModalOpen(false);
+        if (!selectedDate || !selectedTime) return;
 
-        const isModifying = modalMode === 'modify';
         Swal.fire({
-            title: isModifying ? "Modificada" : "Clase Agendada",
-            text: isModifying
-                ? `Tu clase ha sido reprogramada para el ${selectedDate} a las ${selectedTime}.`
-                : `Has agendado tu clase con éxito el ${selectedDate} a las ${selectedTime}.`,
-            icon: "success",
-            confirmButtonColor: "#472825", // Color dark
-            background: "#fff4e2", // Color cream claro
-            color: "#472825"
+            title: "Procesando...",
+            didOpen: () => Swal.showLoading(),
+            background: "#fff4e2"
         });
+
+        const startTime = `${selectedDate}T${selectedTime}:00`;
+        const payload = {
+            expertId: selectedExpertForMod,
+            courseId: 1,
+            startTime: startTime,
+            notes: "Agendada por el estudiante"
+        };
+
+        try {
+            if (modalMode === 'schedule') {
+                await bookSchedule(currentUser.id, payload);
+            } else {
+                // Para modificar, necesitaríamos el ID del schedule anterior. 
+                // Como el estado actual es simplificado, buscamos si ya tenía una agendada.
+                // Nota: Esto es una simplificación.
+                Swal.fire("Aviso", "La reprogramación requiere el ID de la clase original.", "info");
+                setIsModalOpen(false);
+                return;
+            }
+
+            setScheduledClasses(prev => ({
+                ...prev,
+                [selectedExpertForMod]: {
+                    date: selectedDate,
+                    time: selectedTime
+                }
+            }));
+
+            setIsModalOpen(false);
+
+            Swal.fire({
+                title: "Clase Agendada",
+                text: `Has agendado tu clase con éxito el ${selectedDate} a las ${selectedTime}.`,
+                icon: "success",
+                confirmButtonColor: "#472825",
+                background: "#fff4e2",
+                color: "#472825"
+            });
+        } catch (error) {
+            Swal.fire("Error", "No se pudo agendar la clase: " + error.message, "error");
+        }
     };
 
     return (

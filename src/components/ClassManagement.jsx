@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getUserById } from "../services/api";
-import { 
-  getAllSchedules, 
+import {
+  getAllSchedules,
   createAvailability,
-  updateSchedule, 
-  deleteSchedule 
+  updateSchedule,
+  updateScheduleStatus,
+  deleteSchedule
 } from "../services/scheduleService";
 import "../styles/ClassManagement.css";
 import Swal from "sweetalert2";
@@ -17,7 +18,7 @@ const ClassManagement = () => {
   const [viewMode, setViewMode] = useState("LIST"); // "LIST" o "FORM"
   const [classList, setClassList] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // --- ESTADO DEL FORMULARIO ---
   const [formData, setFormData] = useState({
     professorId: "",
@@ -25,7 +26,7 @@ const ClassManagement = () => {
     specialty: "",
     schedules: [] // Array de { id, date, hours: [] }
   });
-  
+
   const [editId, setEditId] = useState(null); // ID del horario que estamos editando
   const [loadingProfessor, setLoadingProfessor] = useState(false);
 
@@ -38,12 +39,12 @@ const ClassManagement = () => {
     setLoading(true);
     try {
       const data = await getAllSchedules();
-      
+
       // Enriquecer los datos con los nombres y especialidades de los profesores
       const uniqueExpertIds = [...new Set(data.map(item => item.expertId || item.professorId).filter(Boolean))];
       const expertNames = {};
       const expertSpecialties = {};
-      
+
       await Promise.all(uniqueExpertIds.map(async (id) => {
         try {
           const user = await getUserById(id);
@@ -60,7 +61,7 @@ const ClassManagement = () => {
         professorName: expertNames[item.expertId || item.professorId] || `Profesor #${item.expertId || item.professorId}`,
         specialty: expertSpecialties[item.expertId || item.professorId] || "Desconocida"
       }));
-      
+
       setClassList(enrichedData);
     } catch (error) {
       console.error("Error al cargar clases:", error);
@@ -75,6 +76,13 @@ const ClassManagement = () => {
     setLoadingProfessor(true);
     try {
       const data = await getUserById(id);
+      
+      // VALIDACIÓN DE ROL: Solo permitir si es TEACHER
+      if (data.role !== "TEACHER") {
+        setFormData(prev => ({ ...prev, name: "ID no corresponde a un Docente", specialty: "" }));
+        return;
+      }
+
       setFormData(prev => ({
         ...prev,
         name: `${data.profile?.firstName || ""} ${data.profile?.lastName || ""}`.trim(),
@@ -133,14 +141,14 @@ const ClassManagement = () => {
   const removeHour = (dateId, hourValue) => {
     setFormData(prev => ({
       ...prev,
-      schedules: prev.schedules.map(s => 
+      schedules: prev.schedules.map(s =>
         s.id === dateId ? { ...s, hours: s.hours.filter(h => h !== hourValue) } : s
       )
     }));
   };
 
   // --- ACCIONES CRUD ---
-  
+
   const handleCreateNew = () => {
     setEditId(null);
     setFormData({
@@ -154,11 +162,18 @@ const ClassManagement = () => {
 
   const handleEdit = (item) => {
     setEditId(item.id);
+
+    // Al editar una clase individual, preparamos el formulario con esa única fecha/hora
+    const dateStr = item.startTime ? item.startTime.split('T')[0] : (item.date || "");
+    const hourStr = item.startTime ? item.startTime.split('T')[1].substring(0, 5) : (item.time || "");
+
     setFormData({
-      professorId: item.professorId || "",
+      professorId: item.expertId || item.professorId || "",
       name: item.professorName || item.name || "",
       specialty: item.specialty || "",
-      schedules: item.schedules || []
+      schedules: [
+        { id: Date.now(), date: dateStr, hours: [hourStr] }
+      ]
     });
     setViewMode("FORM");
   };
@@ -194,7 +209,7 @@ const ClassManagement = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.professorId || !formData.name) {
       Swal.fire("Error", "Nombre o ID de profesor inválido", "error");
       return;
@@ -213,39 +228,32 @@ const ClassManagement = () => {
 
     try {
       if (editId) {
-        // Si es edición, asume que se editaba un grupo. Como ahora es individual,
-        // esto podría requerir ajustes en tu backend, pero usaremos el mismo flat payload temporalmente.
+        // Si es edición, tomamos la primera fecha y hora del formulario (ya que editamos uno por uno)
         const firstDate = formData.schedules[0]?.date || "";
         const firstHour = formData.schedules[0]?.hours[0] || "";
+        const startTime = `${firstDate}T${firstHour}:00`;
+
         const payload = {
-          professorId: Number(formData.professorId),
-          date: firstDate,
-          time: firstHour
+          expertId: Number(formData.professorId),
+          courseId: 1,
+          startTime: startTime,
+          notes: "Disponible"
         };
-        await updateSchedule(editId, payload);
+
+        await updateSchedule(editId, 1, payload);
       } else {
         // --- NUEVA LÓGICA DE CREACIÓN: Múltiples peticiones por cada hora ---
         const createPromises = [];
-        
+
         formData.schedules.forEach(sched => {
           sched.hours.forEach(hour => {
-            // Formatear date a dd/MM/yyyy
-            const [y, m, d] = sched.date.split('-');
-            const formattedDate = `${d}/${m}/${y}`;
-
-            // Formatear time a hh:mm a.m./p.m.
-            const [hh, mm] = hour.split(':');
-            let h = parseInt(hh, 10);
-            const ampm = h >= 12 ? 'p.m.' : 'a.m.';
-            h = h % 12 || 12;
-            const formattedTime = `${h.toString().padStart(2, '0')}:${mm} ${ampm}`;
+            // Combinar date y time en un formato LocalDateTime
+            const startTime = `${sched.date}T${hour}:00`;
 
             const payload = {
               expertId: Number(formData.professorId),
-              courseId: 1, 
-              studentId: 1,
-              date: formattedDate,
-              time: formattedTime,
+              courseId: 1,
+              startTime: startTime,
               notes: "Disponible"
             };
             // createAvailability hace un POST a /api/schedules
@@ -256,7 +264,7 @@ const ClassManagement = () => {
         // Esperamos a que todas las peticiones terminen de enviarse
         await Promise.all(createPromises);
       }
-      
+
       Swal.fire({
         icon: "success",
         title: editId ? "Clase Actualizada" : "Clase Creada",
@@ -274,7 +282,7 @@ const ClassManagement = () => {
   const handleToggleGroupPublish = async (group, isPublished) => {
     const newStatus = isPublished ? "AVAILABLE" : "UNPUBLISHED";
     try {
-      await Promise.all(group.schedules.map(item => updateSchedule(item.id, { ...item, status: newStatus })));
+      await Promise.all(group.schedules.map(item => updateScheduleStatus(item.id, newStatus)));
       setClassList(prev => prev.map(c => {
         if (c.expertId === group.profId || c.professorId === group.profId) {
           return { ...c, status: newStatus };
@@ -297,15 +305,15 @@ const ClassManagement = () => {
 
       {viewMode === "LIST" ? (
         <div className="list-view-section">
-          <div className="flex justify-between items-center mb-6" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px'}}>
-            <h2 className="section-title" style={{margin: 0}}>
+          <div className="flex justify-between items-center mb-6" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <h2 className="section-title" style={{ margin: 0 }}>
               <Icon icon="fluent:list-24-filled" />
               Clases Registradas
             </h2>
-            <div style={{display: 'flex', gap: '12px'}}>
-              <button 
-                className="btn-create-init" 
-                style={{margin: 0, padding: '12px 24px', fontSize: '15px'}} 
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                className="btn-create-init"
+                style={{ margin: 0, padding: '12px 24px', fontSize: '15px' }}
                 onClick={handleCreateNew}
               >
                 <Icon icon="fluent:add-circle-24-filled" />
@@ -346,40 +354,54 @@ const ClassManagement = () => {
                   }, {})).map((group) => {
                     const isPublished = group.schedules.some(s => s.status === 'AVAILABLE' || s.status === 'PUBLISHED');
                     return (
-                    <tr key={group.profId}>
-                      <td>
-                        <div className="professor-info-cell">
-                          <span className="prof-name">{group.professorName}</span>
-                          <span className="prof-id">ID: {group.profId}</span>
-                        </div>
-                      </td>
-                      <td>{group.specialty}</td>
-                      <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          {group.schedules.map(sched => {
-                            const dateObj = sched.startTime ? new Date(sched.startTime) : null;
-                            const dateStr = dateObj ? dateObj.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : (sched.date + " " + sched.time);
-                            return <span key={sched.id} style={{ fontSize: '13px', background: '#f5ebe0', padding: '2px 8px', borderRadius: '4px', display: 'inline-block', width: 'fit-content' }}>{dateStr}</span>;
-                          })}
-                        </div>
-                      </td>
-                      <td>
-                        <button 
-                          className={`w-12 h-6 rounded-full relative transition-colors ${isPublished ? 'bg-green-500' : 'bg-gray-300'}`}
-                          onClick={() => handleToggleGroupPublish(group, !isPublished)}
-                        >
-                          <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${isPublished ? 'translate-x-6' : 'translate-x-1'}`}></div>
-                        </button>
-                      </td>
-                      <td>
-                        <div className="actions-cell">
-                          <button className="btn-action btn-delete" onClick={() => handleGroupDelete(group)} title="Eliminar Todo">
-                            <Icon icon="fluent:delete-24-filled" />
+                      <tr key={group.profId}>
+                        <td>
+                          <div className="professor-info-cell">
+                            <span className="prof-name">{group.professorName}</span>
+                            <span className="prof-id">ID: {group.profId}</span>
+                          </div>
+                        </td>
+                        <td>{group.specialty}</td>
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {group.schedules.map(sched => {
+                              const dateObj = sched.startTime ? new Date(sched.startTime) : null;
+                              const dateStr = dateObj ? dateObj.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : (sched.date + " " + sched.time);
+                              return (
+                                <div key={sched.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span style={{ fontSize: '13px', background: '#f5ebe0', padding: '2px 8px', borderRadius: '4px', display: 'inline-block', width: 'fit-content' }}>
+                                    {dateStr}
+                                  </span>
+                                  <button
+                                    onClick={() => handleEdit(sched)}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-mid)', display: 'flex', alignItems: 'center', padding: 0 }}
+                                    title="Editar esta hora"
+                                  >
+                                    <Icon icon="fluent:edit-16-regular" />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </td>
+                        <td>
+                          <button
+                            className={`w-12 h-6 rounded-full relative transition-colors ${isPublished ? 'bg-green-500' : 'bg-gray-300'}`}
+                            onClick={() => handleToggleGroupPublish(group, !isPublished)}
+                          >
+                            <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${isPublished ? 'translate-x-6' : 'translate-x-1'}`}></div>
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )})}
+                        </td>
+                        <td>
+                          <div className="actions-cell">
+                            <button className="btn-action btn-delete" onClick={() => handleGroupDelete(group)} title="Eliminar Todo">
+                              <Icon icon="fluent:delete-24-filled" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             )}
@@ -391,13 +413,13 @@ const ClassManagement = () => {
             <Icon icon="fluent:person-board-24-filled" />
             {editId ? "Editar Clase" : "Información del Profesor"}
           </div>
-          
+
           <div className="form-grid">
             <div className="form-group">
               <label className="form-label">ID PROFESOR</label>
-              <input 
-                type="text" 
-                className="form-input" 
+              <input
+                type="text"
+                className="form-input"
                 placeholder="Ingresa el ID"
                 value={formData.professorId}
                 onChange={handleIdChange}
@@ -406,22 +428,22 @@ const ClassManagement = () => {
 
             <div className="form-group">
               <label className="form-label">Nombre y Apellido</label>
-              <input 
-                type="text" 
-                className="form-input" 
+              <input
+                type="text"
+                className="form-input"
                 placeholder="Nombre del profesor"
                 value={formData.name}
                 readOnly
                 disabled
               />
-              {loadingProfessor && <span style={{fontSize: '12px', color: 'var(--color-mid)'}}>Buscando...</span>}
+              {loadingProfessor && <span style={{ fontSize: '12px', color: 'var(--color-mid)' }}>Buscando...</span>}
             </div>
 
             <div className="form-group">
               <label className="form-label">Especialidad</label>
-              <input 
-                type="text" 
-                className="form-input" 
+              <input
+                type="text"
+                className="form-input"
                 placeholder="Especialidad"
                 value={formData.specialty}
                 readOnly
@@ -444,15 +466,15 @@ const ClassManagement = () => {
               {formData.schedules.map((sched) => (
                 <div key={sched.id} className="date-item">
                   <div className="date-header">
-                    <input 
-                      type="date" 
+                    <input
+                      type="date"
                       className="date-input"
                       value={sched.date}
                       onChange={(e) => handleDateChange(sched.id, e.target.value)}
                     />
-                    <button 
-                      type="button" 
-                      className="remove-btn" 
+                    <button
+                      type="button"
+                      className="remove-btn"
                       onClick={() => removeDate(sched.id)}
                     >
                       <Icon icon="fluent:delete-24-regular" />
@@ -463,20 +485,20 @@ const ClassManagement = () => {
                     {sched.hours && sched.hours.map((h, index) => (
                       <div key={index} className="hour-chip">
                         {h}
-                        <button 
-                          type="button" 
-                          className="remove-btn" 
-                          style={{fontSize: '12px'}}
+                        <button
+                          type="button"
+                          className="remove-btn"
+                          style={{ fontSize: '12px' }}
                           onClick={() => removeHour(sched.id, h)}
                         >
                           ✕
                         </button>
                       </div>
                     ))}
-                    
+
                     <div className="add-hour-wrapper">
-                      <input 
-                        type="time" 
+                      <input
+                        type="time"
                         className="hour-input"
                         id={`input-hour-${sched.id}`}
                         onKeyDown={(e) => {
@@ -487,8 +509,8 @@ const ClassManagement = () => {
                           }
                         }}
                       />
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         className="btn-add-hour"
                         onClick={() => {
                           const input = document.getElementById(`input-hour-${sched.id}`);
@@ -508,8 +530,8 @@ const ClassManagement = () => {
           </div>
 
           <div className="form-actions">
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="btn-cancel"
               onClick={() => setViewMode("LIST")}
             >

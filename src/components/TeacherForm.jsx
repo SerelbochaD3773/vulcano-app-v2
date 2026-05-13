@@ -48,7 +48,7 @@ const TeacherForm = () => {
     setLoadingList(true);
     try {
       const all = await getAllUsers();
-      // Mostrar usuarios que tengan rol TEACHER o que tengan una especialidad (bio) guardada
+      // Mostrar usuarios con rol TEACHER O que tengan una especialidad (bio)
       setTeachers(all.filter((u) => u.role === "TEACHER" || u.profile?.bio));
     } catch {
       setTeachers([]);
