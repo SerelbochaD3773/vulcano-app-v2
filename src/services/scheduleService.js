@@ -3,7 +3,7 @@
  * Este archivo centraliza las peticiones CRUD para las clases/horarios.
  */
 
-const API_BASE_URL = "http://localhost:8080/api/schedules";
+const API_BASE_URL = "/api/schedules";
 
 /**
  * Obtiene todos los horarios (la lista completa para gestión).
@@ -36,16 +36,6 @@ export const getSchedulesByStudent = async (studentId) => {
     if (!response.ok) throw new Error("Error al obtener los horarios del estudiante");
     return await response.json();
 };
-
-// ----------------------------------------------------------
-// Tarea 13: se separó la función createSchedule (que antes
-// cambiaba de comportamiento según cuántos argumentos recibía)
-// en DOS funciones con nombres claros y responsabilidad única.
-//
-// ANTES: createSchedule(arg1, arg2) — confuso
-// AHORA: createAvailability(formData) — para el docente
-//        bookSchedule(studentId, data) — para el alumno
-// ----------------------------------------------------------
 
 /**
  * [DOCENTE] Crea un nuevo bloque de disponibilidad (horario disponible).
@@ -86,11 +76,13 @@ export const bookSchedule = async (studentId, scheduleData) => {
 
 /**
  * Actualiza una clase existente.
- * @param {number} id
+ * @param {number} scheduleId
+ * @param {number} studentId
  * @param {Object} scheduleData
+ * @returns {Promise<Object>}
  */
-export const updateSchedule = async (id, scheduleData) => {
-    const response = await fetch(`${API_BASE_URL}/${id}`, {
+export const updateSchedule = async (scheduleId, studentId, scheduleData) => {
+    const response = await fetch(`${API_BASE_URL}/${scheduleId}/student/${studentId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(scheduleData)
@@ -104,11 +96,31 @@ export const updateSchedule = async (id, scheduleData) => {
 };
 
 /**
- * Elimina una clase/registro por ID.
- * @param {number} id
+ * Actualiza solo el status (publicar/despublicar) de un horario.
+ * No requiere studentId, es una acción de administración.
+ * @param {number} scheduleId
+ * @param {string} status - "AVAILABLE" | "UNPUBLISHED"
+ * @returns {Promise<Object>}
  */
-export const deleteSchedule = async (id) => {
-    const response = await fetch(`${API_BASE_URL}/${id}`, {
+export const updateScheduleStatus = async (scheduleId, status) => {
+    const response = await fetch(`${API_BASE_URL}/${scheduleId}/status?status=${status}`, {
+        method: "PATCH"
+    });
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error from backend on status update:", errorText);
+        throw new Error("Error al cambiar el estado: " + errorText);
+    }
+    return await response.json();
+};
+
+/**
+ * Elimina una clase/disponibilidad por ID (admin, sin studentId).
+ * @param {number} scheduleId
+ * @returns {Promise<boolean>}
+ */
+export const deleteSchedule = async (scheduleId) => {
+    const response = await fetch(`${API_BASE_URL}/${scheduleId}`, {
         method: "DELETE"
     });
     if (!response.ok) {
