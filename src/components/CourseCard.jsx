@@ -6,14 +6,15 @@
  * @param {Object} course - Todo el objeto del curso (name, status, courseLevel, etc.)
  * @param {Function} onEdit - Función padre a ejecutar cuando se toque Editar
  * @param {Function} onDelete - Función padre a ejecutar cuando se toque Eliminar
+ * @param {Function} onModules - Función padre a ejecutar cuando se toque Módulos
+ * @param {Function} onEnroll - Función padre para inscribir al usuario en el curso
+ * @param {Function} onViewCourse - Función padre para navegar a la vista de módulos del curso
+ * @param {Boolean} isEnrolled - Indica si el usuario actual ya está inscrito (dato real del backend)
  * @param {Number} index - El número de posición de la tarjeta (0, 1, 2...)
  * @param {String} viewMode - Manda "grid" (cuadrados) o "list" (filas horizontales largas)
  * @param {String} roleView - "USER" o "ADMIN"
  */
-const CourseCard = ({ course, onEdit, onDelete, index, viewMode = 'grid', roleView = 'ADMIN' }) => {
-
-  // Mock: Para simular que el usuario está inscrito (coincide con el mock de CoursePage)
-  const isEnrolled = roleView === 'USER' && (index % 3 === 0);
+const CourseCard = ({ course, onEdit, onDelete, onModules, onEnroll, onViewCourse, isEnrolled = false, index, viewMode = 'grid', roleView = 'ADMIN' }) => {
 
   // -- LÓGICA DE CÁLCULO DE INTERFAZ --
   // Si existe una fecha de creación y la diferencia entre la fecha de hoy 
@@ -22,14 +23,14 @@ const CourseCard = ({ course, onEdit, onDelete, index, viewMode = 'grid', roleVi
 
   return (
     // Contenedor principal de la Tarjeta. Incluye animaciones CSS de Hover para elevarse.
-    <div className={`cp-card hover:-translate-y-2 hover:scale-[1.03] hover:border-[var(--color-mid)] hover:shadow-[0_12px_0_var(--color-mid)] transition-all duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] ${viewMode === 'list' ? 'cp-card-list' : ''}`} style={{ animationDelay: `${index * 0.07}s` }}>
+    <div className={`cp-card hover:-translate-y-2 hover:scale-[1.03] hover:border-mid hover:shadow-[0_12px_0_var(--color-mid)] transition-all duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] ${viewMode === 'list' ? 'cp-card-list' : ''}`} style={{ animationDelay: `${index * 0.07}s` }}>
 
       {/* ZONA 1: IMAGEN DEL CURSO */}
       <div className="cp-card-img-wrapper">
         {course.imageUrl ? (
           <img src={course.imageUrl} alt={course.name} className="cp-card-img" />
         ) : (
-          <div className="cp-card-img bg-gradient-to-br from-slate-100 to-indigo-50 flex items-center justify-center">
+          <div className="cp-card-img bg-linear-to-br from-slate-100 to-indigo-50 flex items-center justify-center">
             {/* Ícono de Volcán que aparece por defecto si no pusiste un link de foto */}
             <span className="text-5xl opacity-40">🌋</span>
           </div>
@@ -63,7 +64,7 @@ const CourseCard = ({ course, onEdit, onDelete, index, viewMode = 'grid', roleVi
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="cp-card-title">{course.name || 'Sin nombre'}</h3>
             {isNew && (
-              <span className="bg-gradient-to-r from-amber-300 to-amber-500 text-amber-950 text-[11px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm border border-amber-200 flex-shrink-0 animate-pulse">
+              <span className="bg-linear-to-r from-amber-300 to-amber-500 text-amber-950 text-[11px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm border border-amber-200 shrink-0 animate-pulse">
                 ✨ Nuevo
               </span>
             )}
@@ -107,15 +108,24 @@ const CourseCard = ({ course, onEdit, onDelete, index, viewMode = 'grid', roleVi
             {roleView === 'ADMIN' ? (
               <>
                 <button className="cp-card-btn cp-card-edit flex-1" onClick={() => onEdit(course)}>Editar</button>
+                <button className="cp-card-btn cp-card-edit flex-1" onClick={() => onModules(course)}>Módulos</button>
                 <button className="cp-card-btn cp-card-delete flex-1" onClick={() => onDelete(course)}>Eliminar</button>
               </>
             ) : (
               isEnrolled ? (
-                <button className="cp-card-btn flex-1" style={{ backgroundColor: '#d1fae5', color: '#065f46', borderColor: '#a7f3d0' }}>
+                <button
+                  className="cp-card-btn flex-1"
+                  style={{ backgroundColor: '#d1fae5', color: '#065f46', borderColor: '#a7f3d0' }}
+                  onClick={() => onViewCourse(course)}
+                >
                   📖 VER CURSO
                 </button>
               ) : (
-                <button className="cp-card-btn flex-1" style={{ backgroundColor: '#fde6cd', color: '#472825', borderColor: '#fbcfe8' }}>
+                <button
+                  className="cp-card-btn flex-1"
+                  style={{ backgroundColor: '#fde6cd', color: '#472825', borderColor: '#fbcfe8' }}
+                  onClick={() => onEnroll(course)}
+                >
                   🎓 INSCRIBIRSE
                 </button>
               )

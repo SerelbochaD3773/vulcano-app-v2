@@ -1,93 +1,136 @@
-# 🌋 Proyecto Vulcano (Frontend)
+# 🌋 Vulcano App — Frontend (Grupo 1)
+
 ### **Aprendizaje Interactivo a Través de la Gamificación**
 
-**Vulcano App** es una plataforma educativa innovadora diseñada para transformar el aprendizaje del desarrollo de software en una experiencia lúdica e interactiva. Al integrar dinámicas de gamificación, permitimos que los estudiantes consoliden conceptos técnicos de la carrera de Desarrollo de Software mientras fortalecen su lógica de programación en un entorno divertido y desafiante.
+---
+
+## 📌 Descripción
+
+**Vulcano App** es la interfaz de usuario de la plataforma educativa Vulcano. Permite a los estudiantes interactuar con cursos, módulos de aprendizaje, desafíos de código y clases privadas con expertos. Para los administradores, ofrece gestión completa de cursos, módulos, usuarios y contenido.
+
+**Arquitectura:** Aplicación SPA (Single Page Application) con React que se comunica con el backend [Vulcano API](https://github.com/MarioMunera1993/vulcano-api-grupo-1) mediante API REST.
 
 ---
 
-## 🎯 Objetivos del Proyecto
-
-*   **Objetivo General:** Implementar una interfaz de usuario moderna y dinámica que conecte con la **Vulcano API**, ofreciendo una experiencia académica gamificada.
-*   **Enfoque Educativo:** Facilitar la práctica de lógica de programación mediante desafíos interactivos, un editor de código en tiempo real y sistemas de retroalimentación (reseñas).
-
----
-
-## 🛠️ Tecnologías y Versiones
-
-Este proyecto está construido con las últimas tecnologías del ecosistema web para asegurar rendimiento y escalabilidad:
+## 🛠️ Tech Stack
 
 | Herramienta | Versión | Descripción |
 | :--- | :--- | :--- |
 | **Node.js** | >= 18.x | Entorno de ejecución |
 | **React** | 19.2.0 | Biblioteca base de la interfaz |
 | **Vite** | 7.3.1 | Herramienta de compilación ultra rápida |
-| **Tailwind CSS**| 4.2.1 | Framework de estilos utilitarios |
+| **Tailwind CSS** | 4.2.1 | Framework de estilos utilitarios |
+| **SweetAlert2** | latest | Notificaciones y modales |
+| **React Router** | latest | Navegación SPA |
 | **JavaScript** | ES6+ | Lógica de la aplicación |
 
 ---
 
-## 🚀 Instalación y Ejecución Local
+## 📋 Requisitos Previos
 
-Sigue estos pasos para poner en marcha el proyecto en tu entorno local:
+- **Node.js** versión 18 o superior
+- **npm** (viene incluido con Node.js)
+- **Backend arrancado** en `http://localhost:8080` (Vulcano API)
 
-### 1. Requisitos Previos
-Asegúrate de tener instalado [Node.js](https://nodejs.org/) y un gestor de paquetes (NPM viene con Node).
+---
 
-### 2. Clonar el repositorio
+## 🚀 Instalación y Ejecución
+
+### 1. Clonar el repositorio
+
 ```bash
 git clone https://github.com/MarioMunera1993/vulcano-app.git
 cd vulcano-app
 ```
 
-### 3. Instalar dependencias
+### 2. Instalar dependencias
+
 ```bash
 npm install
 ```
 
-### 4. Lanzar el servidor de desarrollo
+### 3. Lanzar el servidor de desarrollo
+
 ```bash
 npm run dev
 ```
-> La aplicación estará disponible en `http://localhost:5173` (o el puerto indicado por Vite).
+
+> La aplicación estará disponible en `http://localhost:5173`
 
 ---
 
-## 🧠 Características Técnicas (V2.0)
+## 🔧 Configuración del Proxy (Vite)
 
-La versión actual incluye módulos avanzados de interacción con el usuario:
+El frontend usa un **proxy de Vite** para evitar errores de CORS durante el desarrollo. Todas las peticiones a `/api/*` y `/uploads/*` se redirigen automáticamente al backend:
 
-*   **Gestión de Reseñas (CRUD):** Interacción completa con API REST para crear, editar y eliminar comentarios.
-*   **Módulo de Desafíos:** Entorno de práctica con editor de código integrado y ejecución en tiempo real mediante `eval()` (en entorno controlado).
-*   **Interactividad Avanzada:** Uso de `IntersectionObserver` para video-aprendizaje y animaciones dinámicas con Tailwind CSS.
-*   **Seguridad y Validación:** Sanitización de entradas (Prevención XSS) y validaciones mediante expresiones regulares.
-*   **Arquitectura Modular:** Organización de scripts por responsabilidad para facilitar el mantenimiento.
+```javascript
+// vite.config.js
+server: {
+  proxy: {
+    '/api': {
+      target: 'http://localhost:8080',
+      changeOrigin: true,
+      secure: false,
+    },
+    '/uploads': {
+      target: 'http://localhost:8080',
+      changeOrigin: true,
+      secure: false,
+    },
+  },
+}
+```
+
+> **Importante:** Los servicios (`api.js`, `courseService.js`, `moduleService.js`) usan rutas relativas como `/api/courses` que Vite redirige automáticamente. No es necesario configurar la URL del backend manualmente.
 
 ---
 
 ## 📂 Estructura del Proyecto
 
-La organización de carpetas sigue un patrón modular para facilitar el escalamiento y mantenimiento:
-
 ```text
 src/
-├── assets/      # Recursos estáticos (Imágenes, SVGs, fuentes).
-├── components/  # Componentes reutilizables de la interfaz.
-├── helpers/     # Funciones de utilidad y lógica auxiliar.
-├── pages/       # Vistas principales de la aplicación.
-├── router/      # Configuración de rutas y navegación.
-├── services/    # Lógica de comunicación con el API (peticiones Fetch).
-├── App.jsx      # Componente raíz.
-├── main.jsx     # Punto de entrada de React.
-└── index.css    # Estilos globales de la aplicación.
+├── assets/         # Recursos estáticos (imágenes, SVGs, fuentes)
+├── components/     # Componentes reutilizables (CourseCard, ModuleCard, NavBar...)
+├── helpers/        # Funciones de utilidad y lógica auxiliar
+├── hooks/          # Custom hooks (useAuth)
+├── pages/          # Vistas principales (CoursePage, ModuleView...)
+│   └── layout/     # Layout principal con sidebar
+├── router/         # Configuración de rutas y PrivateRoute
+├── services/       # Comunicación con la API (api.js, courseService, moduleService)
+├── styles/         # Archivos CSS por módulo
+├── App.jsx         # Componente raíz
+├── main.jsx        # Punto de entrada de React
+└── index.css       # Estilos globales
 ```
 
 ---
 
-## 🔗 Conexión con el Backend (API)
+## 🔐 Roles y Permisos
 
-Este frontend se comunica con la **[Vulcano API](https://github.com/MarioMunera1993/vulcano-api-grupo-1)**, desarrollada en **Java Spring Boot**.
-*   **Arquitectura:** Cliente-Servidor mediante API REST.
-*   **Persistencia:** Los datos se gestionan a través de la API en PostgreSQL/H2.
+La aplicación soporta dos roles de usuario:
+
+| Funcionalidad | `USER` | `ADMIN` |
+| :--- | :---: | :---: |
+| Ver cursos publicados y activos | ✅ | ✅ |
+| Inscribirse en cursos | ✅ | ✅ |
+| Ver módulos de un curso | ✅ | ✅ |
+| Crear/editar/eliminar cursos | ❌ | ✅ |
+| Crear/editar/eliminar módulos | ❌ | ✅ |
+| Gestionar usuarios y roles | ❌ | ✅ |
+| Botón "Módulos" en tarjeta de curso | ❌ | ✅ |
+
+---
+
+## 🧠 Características Técnicas
+
+- **Gestión de Cursos (CRUD):** Creación, edición, publicación y eliminación con validaciones del backend.
+- **Gestión de Módulos (CRUD):** Vinculados a cursos, con control de acceso por rol.
+- **Sistema de Reseñas:** Interacción con la API REST para valoraciones.
+- **Filtros Avanzados:** Búsqueda por nombre, filtros por estado, visibilidad y nivel.
+- **Vista Dual:** Grid y Lista para la visualización de cursos.
+- **Autenticación:** Login/registro con validaciones en frontend y backend.
+- **SweetAlert2:** Notificaciones toast y modales de confirmación.
+- **View Transitions:** Animaciones fluidas al filtrar y navegar.
 
 ---
 
@@ -104,4 +147,5 @@ Este frontend se comunica con la **[Vulcano API](https://github.com/MarioMunera1
 ---
 
 ## 📄 Licencia
+
 Este proyecto se encuentra bajo la licencia MIT.
