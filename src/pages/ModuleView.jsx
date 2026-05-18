@@ -1,7 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import NavbarPpal from '../components/NavbarPpal';
-import VulcanoFooter from '../components/VulcanoFooter';
+
 import Swal from 'sweetalert2';
 import ModuleCard from '../components/ModuleCard';
 import ModuleForm from '../components/ModuleForm';
@@ -306,10 +305,6 @@ const ModuleView = () => {
           </div>
         </div>
       )}
-
- 
-      <VulcanoFooter />
-
 
     </div>
   );

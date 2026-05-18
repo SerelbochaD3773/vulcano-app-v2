@@ -103,6 +103,7 @@ const Layout = ({ children }) => {
             <span className="sidebar-text">Cursos</span>
           </button>
 
+          {user?.role === "ADMIN" && (
           <button
             className="sidebar-nav-btn"
             onClick={() => navigate("/layout/module-view")}
@@ -110,6 +111,7 @@ const Layout = ({ children }) => {
             <span className="btn-icon">🎓</span>
             <span className="sidebar-text">Módulos</span>
           </button>
+          )}
 
           <button
             className="sidebar-nav-btn"
@@ -131,22 +133,30 @@ const Layout = ({ children }) => {
            
 
           {user?.role === "ADMIN" && (
-            <button
-              className="sidebar-nav-btn"
-              onClick={() => navigate("/layout/users")}
-            >
-              <span className="btn-icon">👥</span>
-              <span className="sidebar-text">Usuarios</span>
-            </button>
+            <>
+              <button
+                className="sidebar-nav-btn"
+                onClick={() => navigate("/layout/users")}
+              >
+                <span className="btn-icon">👥</span>
+                <span className="sidebar-text">Usuarios</span>
+              </button>
+              <button
+                className="sidebar-nav-btn"
+                onClick={() => navigate("/layout/clases")}
+              >
+                <span className="btn-icon"><Icon icon="fluent-emoji-flat:teacher-light" width="32" height="32" /></span>
+                <span className="sidebar-text">Clases</span>
+              </button>
+              <button
+                className="sidebar-nav-btn"
+                onClick={() => navigate("/layout/docentes")}
+              >
+                <span className="btn-icon">👨‍🏫</span>
+                <span className="sidebar-text">Docentes</span>
+              </button>
+            </>
           )}
-
-          <button
-            className="sidebar-nav-btn"
-            onClick={() => navigate("/layout/clases")}
-          >
-            <span className="btn-icon"><Icon icon="fluent-emoji-flat:teacher-light" width="32" height="32" /></span>
-            <span className="sidebar-text">Clases</span>
-          </button>
         </nav>
 
         <div className="sidebar-footer">

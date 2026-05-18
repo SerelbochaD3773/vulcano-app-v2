@@ -3,7 +3,7 @@
  * Este archivo centraliza las peticiones CRUD para las clases/horarios.
  */
 
-const API_BASE_URL = "/api/schedules";
+const API_BASE_URL = "http://localhost:8080/api/schedules";
 
 /**
  * Obtiene todos los horarios (la lista completa para gestión).
@@ -59,7 +59,11 @@ export const createAvailability = async (formData) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
     });
-    if (!response.ok) throw new Error("Error al crear la disponibilidad");
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error from backend:", errorText);
+        throw new Error("Error al crear la disponibilidad: " + errorText);
+    }
     return await response.json();
 };
 
@@ -91,7 +95,11 @@ export const updateSchedule = async (id, scheduleData) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(scheduleData)
     });
-    if (!response.ok) throw new Error("Error al actualizar el horario");
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error from backend on update:", errorText);
+        throw new Error("Error al actualizar el horario: " + errorText);
+    }
     return await response.json();
 };
 
@@ -103,6 +111,10 @@ export const deleteSchedule = async (id) => {
     const response = await fetch(`${API_BASE_URL}/${id}`, {
         method: "DELETE"
     });
-    if (!response.ok) throw new Error("Error al eliminar el horario");
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error from backend on delete:", errorText);
+        throw new Error("Error al eliminar el horario: " + errorText);
+    }
     return true;
 };
